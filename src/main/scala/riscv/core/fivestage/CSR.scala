@@ -21,6 +21,16 @@ import riscv.Parameters
 
 object CSRRegister {
   // Refer to Spec. Vol.II Page 8-10
+  val SSTATUS = 0x100.U(Parameters.CSRRegisterAddrWidth)
+  val SIE = 0x104.U(Parameters.CSRRegisterAddrWidth)
+  val STVEC = 0x105.U(Parameters.CSRRegisterAddrWidth)
+  val SCOUNTEREN = 0x106.U(Parameters.CSRRegisterAddrWidth)
+  val SENVCFG = 0x10A.U(Parameters.CSRRegisterAddrWidth)
+  val SCRATCH = 0x140.U(Parameters.CSRRegisterAddrWidth)
+  val SEPC = 0x141.U(Parameters.CSRRegisterAddrWidth)
+  val SCAUSE = 0x142.U(Parameters.CSRRegisterAddrWidth)
+  val STVAL = 0x143.U(Parameters.CSRRegisterAddrWidth)
+  val SIP = 0x144.U(Parameters.CSRRegisterAddrWidth)
   val SATP = 0x180.U(Parameters.CSRRegisterAddrWidth)
   val MSTATUS = 0x300.U(Parameters.CSRRegisterAddrWidth)
   val MIE = 0x304.U(Parameters.CSRRegisterAddrWidth)
@@ -31,6 +41,36 @@ object CSRRegister {
   val MTVAL = 0x343.U(Parameters.CSRRegisterAddrWidth)
   val CycleL = 0xc00.U(Parameters.CSRRegisterAddrWidth)
   val CycleH = 0xc80.U(Parameters.CSRRegisterAddrWidth)
+  val SCONTEXT = 0x5A8.U(Parameters.CSRRegisterAddrWidth)
+}
+
+class MSTATUS extends Bundle {
+  val SD = Bool()
+  val WPRI = UInt(8.W)
+  val TSR = Bool()
+  val TW = Bool()
+  val TVM = Bool()
+  val MXR = Bool()
+  val SUM = Bool()
+  val MPRV = Bool()
+  val XS = UInt(2.W)
+  val FS = UInt(2.W)
+  val MPP = UInt(2.W)
+  val VS = UInt(2.W)
+  val SPP = Bool()
+  val MPIE = Bool()
+  val UBE = Bool()
+  val SPIE = Bool()
+  val WPRI2 = Bool()
+  val MIE = Bool()
+  val WPRI3 = Bool()
+  val SIE = Bool()
+  val WPRI4 = Bool()
+}
+
+class MCAUSE extends Bundle {
+  val Interrupt = Bool()
+  val ExceptionCode = UInt(31.W)
 }
 
 class CSR extends Module {
@@ -80,14 +120,14 @@ class CSR extends Module {
   // If the pipeline and the CLINT are going to read and write the CSR at the same time, let the pipeline write first.
   // This is implemented in a single cycle by passing reg_write_data_ex to clint and writing the data from the CLINT to the CSR.
   io.id_reg_read_data := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === io.reg_read_address_id, io.reg_write_data_ex, MuxLookup(io.reg_read_address_id, 0.U, regLUT))
-  io.clint_access_bundle.mstatus := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MSTATUS, io.reg_write_data_ex, mstatus)
+  io.clint_access_bundle.mstatus := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MSTATUS, io.reg_write_data_ex, mstatus).asTypeOf(new MSTATUS)
   io.clint_access_bundle.mtvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVEC, io.reg_write_data_ex, mtvec)
-  io.clint_access_bundle.mcause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MCAUSE, io.reg_write_data_ex, mcause)
+  io.clint_access_bundle.mcause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MCAUSE, io.reg_write_data_ex, mcause).asTypeOf(new MCAUSE)
   io.clint_access_bundle.mepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEPC, io.reg_write_data_ex, mepc)
   when(io.clint_access_bundle.direct_write_enable) {
-    mstatus := io.clint_access_bundle.mstatus_write_data
+    mstatus := io.clint_access_bundle.mstatus_write_data.asUInt
     mepc := io.clint_access_bundle.mepc_write_data
-    mcause := io.clint_access_bundle.mcause_write_data
+    mcause := io.clint_access_bundle.mcause_write_data.asUInt
     mtval := io.clint_access_bundle.mtval_write_data
   }.elsewhen(io.reg_write_enable_ex) {
     when(io.reg_write_address_ex === CSRRegister.MSTATUS) {
