@@ -23,7 +23,6 @@ class Control extends Module {
     val jump_instruction_id = Input(Bool())
     val stall_flag_if = Input(Bool())
     val stall_flag_mem = Input(Bool())
-    val stall_flag_clint = Input(Bool())
     val stall_flag_bus = Input(Bool())
     val rs1_id = Input(UInt(Parameters.PhysicalRegisterAddrWidth))
     val rs2_id = Input(UInt(Parameters.PhysicalRegisterAddrWidth))
@@ -46,8 +45,8 @@ class Control extends Module {
   io.if_flush := io.jump_flag && !id_hazard || io.csr_start_paging
   io.id_flush := id_hazard || io.csr_start_paging
 
-  io.pc_stall := io.stall_flag_mem || io.stall_flag_clint || id_hazard || io.stall_flag_bus || io.stall_flag_if
-  io.if_stall := io.stall_flag_mem || io.stall_flag_clint || id_hazard
-  io.id_stall := io.stall_flag_mem || io.stall_flag_clint
-  io.ex_stall := io.stall_flag_mem || io.stall_flag_clint
+  io.pc_stall := io.stall_flag_mem || id_hazard || io.stall_flag_bus || io.stall_flag_if
+  io.if_stall := io.stall_flag_mem || id_hazard
+  io.id_stall := io.stall_flag_mem
+  io.ex_stall := io.stall_flag_mem
 }
