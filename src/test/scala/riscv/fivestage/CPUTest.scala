@@ -182,3 +182,24 @@ class ByteAccessTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 }
+
+class SimpleTrapTest extends AnyFlatSpec with ChiselScalatestTester {
+  behavior of "Five Stage CPU"
+  it should "jump to trap handler and then return" in {
+    test(new TestTopModule("interrupt.asmbin")).withAnnotations(TestAnnotations.annos) { c =>
+      c.clock.setTimeout(0)
+      c.io.interrupt.poke(0.U)
+      c.clock.step(5000)
+      c.io.mem_debug_read_address.poke(4.U)
+      c.clock.step()
+      c.io.mem_debug_read_data.expect(0xDEADBEEFL.U)
+      c.io.interrupt.poke(0x1.U)
+      c.clock.step(5)
+      c.io.interrupt.poke(0.U)
+      c.clock.step(10000)
+      c.io.mem_debug_read_address.poke(0x4.U)
+      c.clock.step()
+      c.io.mem_debug_read_data.expect(0x2022L.U)
+    }
+  }
+}
