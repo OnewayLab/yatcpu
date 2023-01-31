@@ -21,6 +21,7 @@ import riscv.Parameters
 
 object CSRRegister {
   // Refer to Spec. Vol.II Page 8-10
+  // Supervisor-level CSRs
   val SSTATUS = 0x100.U(Parameters.CSRRegisterAddrWidth)
   val SIE = 0x104.U(Parameters.CSRRegisterAddrWidth)
   val STVEC = 0x105.U(Parameters.CSRRegisterAddrWidth)
@@ -32,16 +33,25 @@ object CSRRegister {
   val STVAL = 0x143.U(Parameters.CSRRegisterAddrWidth)
   val SIP = 0x144.U(Parameters.CSRRegisterAddrWidth)
   val SATP = 0x180.U(Parameters.CSRRegisterAddrWidth)
+  val SCONTEXT = 0x5A8.U(Parameters.CSRRegisterAddrWidth)
+  // Machine-level CSRs
   val MSTATUS = 0x300.U(Parameters.CSRRegisterAddrWidth)
+  val MISA = 0x301.U(Parameters.CSRRegisterAddrWidth)
+  val MEDELEG = 0x302.U(Parameters.CSRRegisterAddrWidth)
+  val MIDELEG = 0x303.U(Parameters.CSRRegisterAddrWidth)
   val MIE = 0x304.U(Parameters.CSRRegisterAddrWidth)
   val MTVEC = 0x305.U(Parameters.CSRRegisterAddrWidth)
+  val MCOUNTEREN = 0x306.U(Parameters.CSRRegisterAddrWidth)
   val MSCRATCH = 0x340.U(Parameters.CSRRegisterAddrWidth)
   val MEPC = 0x341.U(Parameters.CSRRegisterAddrWidth)
   val MCAUSE = 0x342.U(Parameters.CSRRegisterAddrWidth)
   val MTVAL = 0x343.U(Parameters.CSRRegisterAddrWidth)
+  val MIP = 0x344.U(Parameters.CSRRegisterAddrWidth)
+  val MTINST = 0x34A.U(Parameters.CSRRegisterAddrWidth)
+  val MTVAL2 = 0x34B.U(Parameters.CSRRegisterAddrWidth)
+
   val CycleL = 0xc00.U(Parameters.CSRRegisterAddrWidth)
   val CycleH = 0xc80.U(Parameters.CSRRegisterAddrWidth)
-  val SCONTEXT = 0x5A8.U(Parameters.CSRRegisterAddrWidth)
 }
 
 class MSTATUS extends Bundle {
