@@ -198,7 +198,7 @@ class CLINT extends Module {
     }.otherwise { // Exception occurs in U/S/M-mode and handled in M-mode
       trap_into_M(io.instruction_address_mmu, false.B, io.exception_code_mmu, io.exception_val_mmu)
     }
-  }.elsewhen(io.interrupt_flag =/= InterruptStatus.None && io.csr_bundle.mstatus.MIE) {
+  }.elsewhen(io.interrupt_flag =/= InterruptStatus.None) {
     // TODO: Support more than machine timer interrupt and machine external interrupt
     val epc = Mux(
       io.jump_flag,
@@ -211,14 +211,14 @@ class CLINT extends Module {
       ExceptionCode.MachineExternalInterrupt
     )
     when(io.csr_bundle.mideleg(code)) { // Interrupt delegated to S-mode
-      when(!current_privilege(1)) { // Interrupt occurs in U/S-mode
+      when(current_privilege === PrivilegeLevel.User || current_privilege === PrivilegeLevel.Supervisor && io.csr_bundle.mstatus.SIE) { // Interrupt occurs in U/S-mode
         trap_into_S(epc, true.B, code, 0.U)
       } // Note that interrupts occur in M-mode and delegated to S-mode will be ignore, refer to Spec. Vol.II Page 31
-    }.otherwise { // Interrupt occurs in U/S/M-mode and handled in M-mode
+    }.elsewhen(io.csr_bundle.mstatus.MIE) { // Interrupt occurs in U/S/M-mode and handled in M-mode
       trap_into_M(epc, true.B, code, 0.U)
     }
   }.elsewhen(io.instruction_id === InstructionsRet.mret) {
-    return_from_M()  // Return from M-mode after a trap handled
+    return_from_M() // Return from M-mode after a trap handled
   }.elsewhen(io.instruction_id === InstructionsRet.sret) {
     // When TSR=1, attempts to execute SRET while executing in S-mode will raise an illegal instruction exception,
     // refer to Spec. Vol.II Page 25 and 47

@@ -104,7 +104,7 @@ class CSR extends Module {
     val clint_access_bundle = Flipped(new CSRDirectAccessBundle)
   })
 
-  val status = RegInit(0.U(Parameters.DataWidth))
+  val mstatus = RegInit(0.U(Parameters.DataWidth))
   val medeleg = RegInit(0.U(Parameters.DataWidth)) // TODO: Make bits corresponding to exceptions that cannot occur in less privileged modes read-only zero.
   val mideleg = RegInit(0.U(Parameters.DataWidth))
   val mie = RegInit(0.U(Parameters.DataWidth))
@@ -113,7 +113,6 @@ class CSR extends Module {
   val mepc = RegInit(0.U(Parameters.DataWidth))
   val mcause = RegInit(0.U(Parameters.DataWidth))
   val mtval = RegInit(0.U(Parameters.DataWidth))
-  val sie = RegInit(0.U(Parameters.DataWidth))
   val stvec = RegInit(0.U(Parameters.DataWidth))
   val sscratch = RegInit(0.U(Parameters.DataWidth))
   val sepc = RegInit(0.U(Parameters.DataWidth))
@@ -123,15 +122,15 @@ class CSR extends Module {
   val cycles = RegInit(0.U(64.W))
 
   val regLUT = IndexedSeq(
-    CSRRegister.MSTATUS -> status,
+    CSRRegister.MSTATUS -> mstatus,
     CSRRegister.MIE -> mie,
     CSRRegister.MTVEC -> mtvec,
     CSRRegister.MSCRATCH -> mscratch,
     CSRRegister.MEPC -> mepc,
     CSRRegister.MCAUSE -> mcause,
     CSRRegister.MTVAL -> mtval,
-    CSRRegister.SSTATUS -> status,  // Note that SSTATUS is a subset of MSTATUS
-    CSRRegister.SIE -> sie,
+    CSRRegister.SSTATUS -> mstatus, // Note that SSTATUS is a subset of MSTATUS
+    CSRRegister.SIE -> mie, // Note that SIE is a subset of MIE
     CSRRegister.STVEC -> stvec,
     CSRRegister.SSCRATCH -> sscratch,
     CSRRegister.SEPC -> sepc,
@@ -150,7 +149,7 @@ class CSR extends Module {
   // If the pipeline and the CLINT are going to read and write the CSR at the same time, let the pipeline write first.
   // This is implemented in a single cycle by passing reg_write_data_ex to clint and writing the data from the CLINT to the CSR.
   io.id_reg_read_data := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === io.reg_read_address_id, io.reg_write_data_ex, MuxLookup(io.reg_read_address_id, 0.U, regLUT))
-  io.clint_access_bundle.mstatus := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MSTATUS, io.reg_write_data_ex, status).asTypeOf(new MSTATUS)
+  io.clint_access_bundle.mstatus := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MSTATUS, io.reg_write_data_ex, mstatus).asTypeOf(new MSTATUS)
   io.clint_access_bundle.medeleg := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEDELEG, io.reg_write_data_ex, medeleg)
   io.clint_access_bundle.mideleg := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MIDELEG, io.reg_write_data_ex, mideleg)
   io.clint_access_bundle.mepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEPC, io.reg_write_data_ex, mepc)
@@ -162,7 +161,7 @@ class CSR extends Module {
   io.clint_access_bundle.stval := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVAL, io.reg_write_data_ex, stval)
   io.clint_access_bundle.stvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVEC, io.reg_write_data_ex, stvec)
   when(io.clint_access_bundle.direct_write_enable) {
-    status := io.clint_access_bundle.mstatus_write_data.asUInt
+    mstatus := io.clint_access_bundle.mstatus_write_data.asUInt
     mepc := io.clint_access_bundle.mepc_write_data
     mcause := io.clint_access_bundle.mcause_write_data.asUInt
     mtval := io.clint_access_bundle.mtval_write_data
@@ -171,7 +170,7 @@ class CSR extends Module {
     stval := io.clint_access_bundle.stval_write_data
   }.elsewhen(io.reg_write_enable_ex) {
     when(io.reg_write_address_ex === CSRRegister.MSTATUS) {
-      status := io.reg_write_data_ex
+      mstatus := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.MEPC) {
       mepc := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.MCAUSE) {
@@ -179,7 +178,7 @@ class CSR extends Module {
     }.elsewhen(io.reg_write_address_ex === CSRRegister.MTVAL) {
       mtval := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.SSTATUS) {
-      status := io.reg_write_data_ex
+      mstatus := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.SEPC) {
       sepc := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.SCAUSE) {
@@ -196,7 +195,7 @@ class CSR extends Module {
     }.elsewhen(io.reg_write_address_ex === CSRRegister.MSCRATCH) {
       mscratch := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.SIE) {
-      sie := io.reg_write_data_ex
+      mie := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.STVEC) {
       stvec := io.reg_write_data_ex
     }.elsewhen(io.reg_write_address_ex === CSRRegister.SSCRATCH) {
