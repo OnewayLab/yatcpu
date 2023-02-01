@@ -57,6 +57,8 @@ class MemoryAccess extends Module {
   io.bus.write := false.B
   io.wb_memory_read_data := 0.U
   io.ctrl_stall_flag := false.B
+  io.clint_exception_flag := false.B
+  io.clint_exception_code := 0.U
 
   when(io.clint_exception_token){
     io.bus.request := false.B
@@ -78,11 +80,9 @@ class MemoryAccess extends Module {
       io.ctrl_stall_flag := true.B
       when(io.bus.read_valid) {
         val data = io.bus.read_data
-        io.wb_memory_read_data := MuxLookup(
-          io.funct3,
-          0.U,
-          IndexedSeq(
-            InstructionsTypeL.lb -> MuxLookup(
+        switch(io.funct3) {
+          is(InstructionsTypeL.lb) {
+            io.wb_memory_read_data := MuxLookup(
               mem_address_index,
               Cat(Fill(24, data(31)), data(31, 24)),
               IndexedSeq(
@@ -90,8 +90,10 @@ class MemoryAccess extends Module {
                 1.U -> Cat(Fill(24, data(15)), data(15, 8)),
                 2.U -> Cat(Fill(24, data(23)), data(23, 16))
               )
-            ),
-            InstructionsTypeL.lbu -> MuxLookup(
+            )
+          }
+          is(InstructionsTypeL.lbu) {
+            io.wb_memory_read_data := MuxLookup(
               mem_address_index,
               Cat(Fill(24, 0.U), data(31, 24)),
               IndexedSeq(
@@ -99,20 +101,37 @@ class MemoryAccess extends Module {
                 1.U -> Cat(Fill(24, 0.U), data(15, 8)),
                 2.U -> Cat(Fill(24, 0.U), data(23, 16))
               )
-            ),
-            InstructionsTypeL.lh -> Mux(
-              mem_address_index === 0.U,
-              Cat(Fill(16, data(15)), data(15, 0)),
-              Cat(Fill(16, data(31)), data(31, 16))
-            ),
-            InstructionsTypeL.lhu -> Mux(
-              mem_address_index === 0.U,
-              Cat(Fill(16, 0.U), data(15, 0)),
-              Cat(Fill(16, 0.U), data(31, 16))
-            ),
-            InstructionsTypeL.lw -> data
-          )
-        )
+            )
+          }
+          is(InstructionsTypeL.lh) {
+            when(mem_address_index === 0.U) {
+              io.wb_memory_read_data := Cat(Fill(16, data(15)), data(15, 0))
+            }.elsewhen(mem_address_index === 2.U) {
+              io.wb_memory_read_data := Cat(Fill(16, data(31)), data(31, 16))
+            }.otherwise {
+              io.clint_exception_flag := true.B
+              io.clint_exception_code := ExceptionCode.LoadAddressMisaligned
+            }
+          }
+          is(InstructionsTypeL.lhu) {
+            when(mem_address_index === 0.U) {
+              io.wb_memory_read_data := Cat(Fill(16, 0.U), data(15, 0))
+            }.elsewhen(mem_address_index === 2.U) {
+              io.wb_memory_read_data := Cat(Fill(16, 0.U), data(31, 16))
+            }.otherwise {
+              io.clint_exception_flag := true.B
+              io.clint_exception_code := ExceptionCode.LoadAddressMisaligned
+            }
+          }
+          is(InstructionsTypeL.lw) {
+            when(mem_address_index === 0.U) {
+              io.wb_memory_read_data := data
+            }.otherwise {
+              io.clint_exception_flag := true.B
+              io.clint_exception_code := ExceptionCode.LoadAddressMisaligned
+            }
+          }
+        }
         on_bus_transaction_finished()
       }
     }
@@ -157,10 +176,6 @@ class MemoryAccess extends Module {
       }
     }
   }
-
-  // TODO: Add support for memory access exceptions
-  io.clint_exception_flag := false.B
-  io.clint_exception_code := 0.U
 
   io.forward_data := Mux(io.regs_write_source === RegWriteSource.CSR, io.csr_read_data, io.alu_result)
 }

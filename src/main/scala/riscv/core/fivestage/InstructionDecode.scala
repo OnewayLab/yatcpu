@@ -108,6 +108,7 @@ object InstructionsNop {
 
 object InstructionsRet {
   val mret = 0x30200073L.U(Parameters.DataWidth)
+  val sret = 0x10200073L.U(Parameters.DataWidth)
   val ret = 0x00008067L.U(Parameters.DataWidth)
 }
 
@@ -170,6 +171,9 @@ class InstructionDecode extends Module {
     val if_jump_address = Output(UInt(Parameters.AddrWidth))
   })
 
+  io.clint_exception_flag := false.B
+  io.clint_exception_code := 0.U
+
   // Decode instruction
   val opcode = io.instruction(6, 0)
   val funct3 = io.instruction(14, 12)
@@ -228,18 +232,21 @@ class InstructionDecode extends Module {
       funct3 === InstructionsTypeCSR.csrrs || funct3 === InstructionsTypeCSR.csrrsi ||
       funct3 === InstructionsTypeCSR.csrrc || funct3 === InstructionsTypeCSR.csrrci
     )
-  io.clint_exception_flag := (io.instruction === InstructionsEnv.ecall) || (io.instruction === InstructionsEnv.ebreak)
-  io.clint_exception_code := Mux(
-    io.instruction === InstructionsEnv.ebreak,
-    ExceptionCode.Breakpoint,
-    MuxCase(
+  // TODO: check accessibility of the CSR, refer to Spec. Vol.I Page 5-6
+  when(io.instruction === InstructionsEnv.ebreak) {
+    io.clint_exception_flag := true.B
+    io.clint_exception_code := ExceptionCode.Breakpoint
+  }
+  when(io.instruction === InstructionsEnv.ecall) {
+    io.clint_exception_flag := true.B
+    io.clint_exception_code := MuxCase(
       ExceptionCode.EnvironmentCallFromUMode,
       IndexedSeq(
         (io.current_privilege === PrivilegeLevel.Machine) -> ExceptionCode.EnvironmentCallFromMMode,
         (io.current_privilege === PrivilegeLevel.Supervisor) -> ExceptionCode.EnvironmentCallFromSMode
       )
     )
-  )
+  }
 
   // Jump / Branch / Trap
   val reg1_data = MuxLookup(
@@ -275,6 +282,10 @@ class InstructionDecode extends Module {
       )
     )
   val instruction_jump_address = io.ex_immediate + Mux(opcode === Instructions.jalr, reg1_data, io.instruction_address)
+  when(instruction_jump_flag && (instruction_jump_address(1, 0) =/= 0.U)) { // Jump target address must be 4-byte aligned
+    io.clint_exception_flag := true.B
+    io.clint_exception_code := ExceptionCode.InstructionAddressMisaligned
+  }
   io.clint_jump_flag := instruction_jump_flag
   io.clint_jump_address := instruction_jump_address
   io.if_jump_flag := io.interrupt_assert || instruction_jump_flag
