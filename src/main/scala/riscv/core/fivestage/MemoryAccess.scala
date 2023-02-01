@@ -19,6 +19,7 @@ import chisel3.util._
 import riscv.Parameters
 import riscv.core.BusBundle
 
+
 class MemoryAccess extends Module {
   val io = IO(new Bundle() {
     val alu_result = Input(UInt(Parameters.DataWidth))
@@ -33,6 +34,8 @@ class MemoryAccess extends Module {
     val wb_memory_read_data = Output(UInt(Parameters.DataWidth))
     val ctrl_stall_flag = Output(Bool())
     val forward_data = Output(UInt(Parameters.DataWidth))
+    val clint_exception_flag = Output(Bool())
+    val clint_exception_code = Output(UInt((Parameters.DataBits - 1).W))
 
     val physical_address = Input(UInt(Parameters.AddrWidth))
 
@@ -154,6 +157,10 @@ class MemoryAccess extends Module {
       }
     }
   }
+
+  // TODO: Add support for memory access exceptions
+  io.clint_exception_flag := false.B
+  io.clint_exception_code := 0.U
 
   io.forward_data := Mux(io.regs_write_source === RegWriteSource.CSR, io.csr_read_data, io.alu_result)
 }

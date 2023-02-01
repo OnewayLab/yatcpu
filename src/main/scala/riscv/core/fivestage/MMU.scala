@@ -15,7 +15,6 @@ class MMU extends Module{
     val instructions = Input(UInt(Parameters.InstructionWidth))
     val instructions_address = Input(UInt(Parameters.AddrWidth))
 
-    //from satp
     val ppn_from_satp = Input(UInt(20.W))
 
     val virtual_address = Input(UInt(Parameters.AddrWidth))
@@ -26,10 +25,10 @@ class MMU extends Module{
     val pa_valid = Output(Bool())
     val pa = Output(UInt(Parameters.AddrWidth))
 
-    val page_fault_signals = Output(Bool())
-    val va_cause_page_fault = Output(UInt(Parameters.AddrWidth))
-    val ecause = Output(UInt(Parameters.DataWidth))
-    val epc = Output(UInt(Parameters.AddrWidth))
+    val clint_exception_flag = Output(Bool())
+    val clint_instruction_address = Output(UInt(Parameters.AddrWidth))
+    val clint_exception_code = Output(UInt((Parameters.DataBits - 1).W))
+    val clint_exception_val = Output(UInt(Parameters.AddrWidth))
     val page_fault_responed = Input(Bool())
 
     val bus = new BusBundle()
@@ -51,7 +50,7 @@ class MMU extends Module{
   val page_fault_signals=RegInit(false.B)
 
   def raise_page_fault(): Unit ={
-    io.ecause := Mux(
+    io.clint_exception_code := Mux(
       io.mmu_occupied_by_mem,
       MuxLookup(
         io.instructions,
@@ -63,9 +62,9 @@ class MMU extends Module{
       ),
       12.U // Instruction page fault
     )
-    io.va_cause_page_fault := va //for mtval
+    io.clint_exception_val := va //for mtval
     page_fault_signals := true.B
-    io.epc := Mux(    //info stored before the exception handler, will start again from this pc
+    io.clint_instruction_address := Mux(    //info stored before the exception handler, will start again from this pc
       io.mmu_occupied_by_mem,
       io.instructions_address,  //mem_access
       va,   //IF
@@ -83,13 +82,13 @@ class MMU extends Module{
   io.bus.write_data := 0.U
   io.bus.write_strobe := VecInit(Seq.fill(Parameters.WordSize)(false.B))
   io.bus.write := false.B
-  io.page_fault_signals := page_fault_signals
+  io.clint_exception_flag := page_fault_signals
 
-  io.ecause := 0.U
+  io.clint_exception_code := 0.U
   io.pa := 0.U
   io.restart_done := false.B
-  io.va_cause_page_fault := 0.U
-  io.epc := 0.U
+  io.clint_exception_val := 0.U
+  io.clint_instruction_address := 0.U
 
   //MMU FSM
   //our physical address bits is 32

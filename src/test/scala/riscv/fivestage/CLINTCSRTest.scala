@@ -31,11 +31,6 @@ class CLINTCSRTestTopModule extends Module {
     val instruction = Input(UInt(Parameters.DataWidth))
     val instruction_address = Input(UInt(Parameters.AddrWidth))
 
-    val exception_signal = Input(Bool())
-    val instruction_address_cause_exception = Input(UInt(Parameters.AddrWidth))
-    val exception_cause = Input(UInt(Parameters.DataWidth))
-    val exception_val = Input(UInt(Parameters.AddrWidth))
-
     val jump_flag = Input(Bool())
     val jump_address = Input(UInt(Parameters.AddrWidth))
 
@@ -49,12 +44,18 @@ class CLINTCSRTestTopModule extends Module {
   clint.io.instruction_id := io.instruction
   clint.io.instruction_address_if := io.instruction_address
   clint.io.interrupt_flag := io.interrupt_flag
-  clint.io.exception_signal := io.exception_signal
-  clint.io.instruction_address_cause_exception := io.instruction_address_cause_exception
-  clint.io.exception_cause := io.exception_cause
-  clint.io.exception_val := io.exception_val
   clint.io.jump_flag := io.jump_flag
   clint.io.jump_address := io.jump_address
+  clint.io.exception_flag_id := false.B
+  clint.io.exception_flag_mem := false.B
+  clint.io.exception_flag_mmu := false.B
+  clint.io.instruction_address_id := 0.U
+  clint.io.instruction_address_mem := 0.U
+  clint.io.instruction_address_mmu := 0.U
+  clint.io.exception_code_id := 0.U
+  clint.io.exception_code_mem := 0.U
+  clint.io.exception_code_mmu := 0.U
+  clint.io.exception_val_mmu := 0.U
 
   io.interrupt_handler_address := clint.io.id_interrupt_handler_address
   io.interrupt_assert := clint.io.id_interrupt_assert
@@ -76,10 +77,6 @@ class CLINTCSRTest extends AnyFlatSpec with ChiselScalatestTester{
       c.io.jump_flag.poke(false.B)
       c.io.csr_regs_write_enable.poke(false.B)
       c.io.interrupt_flag.poke(0.U)
-      c.io.exception_signal.poke(false.B)
-      c.io.instruction_address_cause_exception.poke(0.U)
-      c.io.exception_cause.poke(0.U)
-      c.io.exception_val.poke(0.U)
       c.clock.step()
       c.io.csr_regs_write_enable.poke(true.B)
       c.io.csr_regs_write_address.poke(CSRRegister.MTVEC)

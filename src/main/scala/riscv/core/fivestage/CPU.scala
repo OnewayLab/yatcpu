@@ -281,6 +281,7 @@ class CPU extends Module {
   id.io.reg2_forward := forwarding.io.reg2_forward_id
   id.io.interrupt_assert := clint.io.id_interrupt_assert
   id.io.interrupt_handler_address := clint.io.id_interrupt_handler_address
+  id.io.current_privilege := clint.io.current_privilege
 
   id2ex.io.stall_flag := ctrl.io.id_stall
   id2ex.io.flush_enable := ctrl.io.id_flush
@@ -365,11 +366,16 @@ class CPU extends Module {
   clint.io.jump_flag := id.io.if_jump_flag
   clint.io.jump_address := id.io.clint_jump_address
   clint.io.csr_bundle <> csr_regs.io.clint_access_bundle
-  //todo: change it for handling more exceptions
-  clint.io.exception_signal := mmu.io.page_fault_signals
-  clint.io.instruction_address_cause_exception := mmu.io.epc
-  clint.io.exception_val := mmu.io.va_cause_page_fault
-  clint.io.exception_cause := mmu.io.ecause
+  clint.io.exception_flag_id := id.io.clint_exception_flag
+  clint.io.instruction_address_id := if2id.io.output_instruction_address
+  clint.io.exception_code_id := id.io.clint_exception_code
+  clint.io.exception_flag_mem := mem.io.clint_exception_flag
+  clint.io.instruction_address_mem := ex2mem.io.output_instruction_address
+  clint.io.exception_code_mem := mem.io.clint_exception_code
+  clint.io.exception_flag_mmu := mmu.io.clint_exception_flag
+  clint.io.instruction_address_mmu := mmu.io.clint_instruction_address
+  clint.io.exception_code_mmu := mmu.io.clint_exception_code
+  clint.io.exception_val_mmu := mmu.io.clint_exception_val
 
   csr_regs.io.reg_write_enable_ex := id2ex.io.output_csr_write_enable
   csr_regs.io.reg_write_address_ex := id2ex.io.output_csr_address

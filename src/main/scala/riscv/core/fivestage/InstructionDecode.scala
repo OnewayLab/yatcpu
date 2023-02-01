@@ -18,6 +18,7 @@ import chisel3._
 import chisel3.util._
 import riscv.Parameters
 
+
 object InstructionTypes {
   val L = "b0000011".U
   val I = "b0010011".U
@@ -144,6 +145,7 @@ class InstructionDecode extends Module {
     val reg2_forward = Input(UInt(2.W))
     val interrupt_assert = Input(Bool())
     val interrupt_handler_address = Input(UInt(Parameters.AddrWidth))
+    val current_privilege = Input(UInt(2.W))
 
     val regs_reg1_read_address = Output(UInt(Parameters.PhysicalRegisterAddrWidth))
     val regs_reg2_read_address = Output(UInt(Parameters.PhysicalRegisterAddrWidth))
@@ -162,9 +164,13 @@ class InstructionDecode extends Module {
     val ctrl_jump_instruction = Output(Bool())
     val clint_jump_flag = Output(Bool())
     val clint_jump_address = Output(UInt(Parameters.AddrWidth))
+    val clint_exception_flag = Output(Bool())
+    val clint_exception_code = Output(UInt((Parameters.DataBits - 1).W))
     val if_jump_flag = Output(Bool())
     val if_jump_address = Output(UInt(Parameters.AddrWidth))
   })
+
+  // Decode instruction
   val opcode = io.instruction(6, 0)
   val funct3 = io.instruction(14, 12)
   val funct7 = io.instruction(31, 25)
@@ -222,7 +228,20 @@ class InstructionDecode extends Module {
       funct3 === InstructionsTypeCSR.csrrs || funct3 === InstructionsTypeCSR.csrrsi ||
       funct3 === InstructionsTypeCSR.csrrc || funct3 === InstructionsTypeCSR.csrrci
     )
+  io.clint_exception_flag := (io.instruction === InstructionsEnv.ecall) || (io.instruction === InstructionsEnv.ebreak)
+  io.clint_exception_code := Mux(
+    io.instruction === InstructionsEnv.ebreak,
+    ExceptionCode.Breakpoint,
+    MuxCase(
+      ExceptionCode.EnvironmentCallFromUMode,
+      IndexedSeq(
+        (io.current_privilege === PrivilegeLevel.Machine) -> ExceptionCode.EnvironmentCallFromMMode,
+        (io.current_privilege === PrivilegeLevel.Supervisor) -> ExceptionCode.EnvironmentCallFromSMode
+      )
+    )
+  )
 
+  // Jump / Branch / Trap
   val reg1_data = MuxLookup(
     io.reg1_forward,
     io.reg1_data,
