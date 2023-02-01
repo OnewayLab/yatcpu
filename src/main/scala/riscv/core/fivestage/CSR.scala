@@ -18,9 +18,14 @@ import chisel3._
 import chisel3.util._
 import riscv.Parameters
 
+import scala.math.pow
+
 
 object CSRRegister {
   // Refer to Spec. Vol.II Page 8-10
+  // Unprivileged CSRs
+  val CYCLE = 0xc00.U(Parameters.CSRRegisterAddrWidth)
+  val CYCLEH = 0xc80.U(Parameters.CSRRegisterAddrWidth)
   // Supervisor-level CSRs
   val SSTATUS = 0x100.U(Parameters.CSRRegisterAddrWidth)
   val SIE = 0x104.U(Parameters.CSRRegisterAddrWidth)
@@ -35,6 +40,11 @@ object CSRRegister {
   val SATP = 0x180.U(Parameters.CSRRegisterAddrWidth)
   val SCONTEXT = 0x5A8.U(Parameters.CSRRegisterAddrWidth)
   // Machine-level CSRs
+  val MVENDORID = 0xF11.U(Parameters.CSRRegisterAddrWidth)
+  val MARCHID = 0xF12.U(Parameters.CSRRegisterAddrWidth)
+  val MIMPID = 0xF13.U(Parameters.CSRRegisterAddrWidth)
+  val MHARTID = 0xF14.U(Parameters.CSRRegisterAddrWidth)
+  val MCONFIGPTR = 0xF15.U(Parameters.CSRRegisterAddrWidth)
   val MSTATUS = 0x300.U(Parameters.CSRRegisterAddrWidth)
   val MISA = 0x301.U(Parameters.CSRRegisterAddrWidth)
   val MEDELEG = 0x302.U(Parameters.CSRRegisterAddrWidth)
@@ -42,6 +52,7 @@ object CSRRegister {
   val MIE = 0x304.U(Parameters.CSRRegisterAddrWidth)
   val MTVEC = 0x305.U(Parameters.CSRRegisterAddrWidth)
   val MCOUNTEREN = 0x306.U(Parameters.CSRRegisterAddrWidth)
+  val MSTATUSH = 0x310.U(Parameters.CSRRegisterAddrWidth)
   val MSCRATCH = 0x340.U(Parameters.CSRRegisterAddrWidth)
   val MEPC = 0x341.U(Parameters.CSRRegisterAddrWidth)
   val MCAUSE = 0x342.U(Parameters.CSRRegisterAddrWidth)
@@ -49,9 +60,16 @@ object CSRRegister {
   val MIP = 0x344.U(Parameters.CSRRegisterAddrWidth)
   val MTINST = 0x34A.U(Parameters.CSRRegisterAddrWidth)
   val MTVAL2 = 0x34B.U(Parameters.CSRRegisterAddrWidth)
+  val MENVCFG = 0x30A.U(Parameters.CSRRegisterAddrWidth)
+  val MENVCFGH = 0x31A.U(Parameters.CSRRegisterAddrWidth)
+  val MSECCFG = 0x747.U(Parameters.CSRRegisterAddrWidth)
+  val MSECCFGH = 0x757.U(Parameters.CSRRegisterAddrWidth)
+}
 
-  val CycleL = 0xc00.U(Parameters.CSRRegisterAddrWidth)
-  val CycleH = 0xc80.U(Parameters.CSRRegisterAddrWidth)
+class MISA extends Bundle {
+  val MXL = UInt(2.W)
+  val ZERO = UInt((Parameters.DataBits - 28).W)
+  val Extensions = UInt(26.W)
 }
 
 class MSTATUS extends Bundle {
@@ -104,6 +122,13 @@ class CSR extends Module {
     val clint_access_bundle = Flipped(new CSRDirectAccessBundle)
   })
 
+  // Refer to Spec. Vol.II Page 15-18
+  val init_misa = Wire(new MISA)
+  init_misa.MXL := 1.U
+  init_misa.ZERO := 0.U
+  init_misa.Extensions := "b00000101000000000100000000".U // RV32ISU
+
+  val misa = RegInit(init_misa.asUInt)
   val mstatus = RegInit(0.U(Parameters.DataWidth))
   val medeleg = RegInit(0.U(Parameters.DataWidth)) // TODO: Make bits corresponding to exceptions that cannot occur in less privileged modes read-only zero.
   val mideleg = RegInit(0.U(Parameters.DataWidth))
@@ -122,6 +147,7 @@ class CSR extends Module {
   val cycles = RegInit(0.U(64.W))
 
   val regLUT = IndexedSeq(
+    CSRRegister.MISA -> misa,
     CSRRegister.MSTATUS -> mstatus,
     CSRRegister.MIE -> mie,
     CSRRegister.MTVEC -> mtvec,
@@ -137,8 +163,8 @@ class CSR extends Module {
     CSRRegister.SCAUSE -> scause,
     CSRRegister.STVAL -> stval,
     CSRRegister.SATP -> satp,
-    CSRRegister.CycleL -> cycles(31, 0),
-    CSRRegister.CycleH -> cycles(63, 32),
+    CSRRegister.CYCLE -> cycles(31, 0),
+    CSRRegister.CYCLEH -> cycles(63, 32),
   )
   cycles := cycles + 1.U
 

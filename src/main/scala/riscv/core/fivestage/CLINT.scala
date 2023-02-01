@@ -134,7 +134,7 @@ class CLINT extends Module {
   io.id_interrupt_assert := false.B
   io.id_interrupt_handler_address := 0.U
 
-  // Trap occurs in U/S/M-mode and handled in M-mode
+  // Trap occurs in U/S/M-mode and handled in M-mode, refer to Spec. Vol.II Page 21
   def trap_into_M(epc: UInt, interrupt: Bool, code: UInt, value: UInt): Unit = {
     io.csr_bundle.mstatus_write_data.MPIE := io.csr_bundle.mstatus.MIE // Save MIE to MPIE
     io.csr_bundle.mstatus_write_data.MIE := false.B // Disable interrupt
@@ -148,10 +148,15 @@ class CLINT extends Module {
     io.id_interrupt_handler_address := io.csr_bundle.mtvec
   }
 
-  // Return from M-mode after a trap handled
+  // Return from M-mode after a trap handled, refer to Spec. Vol.II Page 21
   def return_from_M(): Unit = {
     io.csr_bundle.mstatus_write_data.MIE := io.csr_bundle.mstatus.MPIE // Restore MIE from MPIE
     current_privilege := io.csr_bundle.mstatus.MPP // Restore current privilege level from MPP
+    io.csr_bundle.mstatus_write_data.MPIE := true.B // Set MPIE to 1
+    io.csr_bundle.mstatus_write_data.MPP := PrivilegeLevel.User // Set MPP to least-privileged mode
+    when(io.csr_bundle.mstatus.MPP =/= PrivilegeLevel.Machine) {
+      io.csr_bundle.mstatus_write_data.MPRV := false.B  // Set MPRV to 0 if MPP is not M
+    }
     io.csr_bundle.direct_write_enable := true.B
     io.id_interrupt_assert := true.B
     io.id_interrupt_handler_address := io.csr_bundle.mepc
@@ -175,6 +180,11 @@ class CLINT extends Module {
   def return_from_S(): Unit = {
     io.csr_bundle.mstatus_write_data.SIE := io.csr_bundle.mstatus.SPIE // Restore SIE from SPIE
     current_privilege := Mux(io.csr_bundle.mstatus.SPP, PrivilegeLevel.Supervisor, PrivilegeLevel.User) // Restore current privilege level from SPP
+    io.csr_bundle.mstatus_write_data.SPIE := true.B // Set SPIE to 1
+    io.csr_bundle.mstatus_write_data.SPP := PrivilegeLevel.User // Set SPP to least-privileged mode
+    when(io.csr_bundle.mstatus.SPP =/= PrivilegeLevel.Machine) {
+      io.csr_bundle.mstatus_write_data.MPRV := false.B // Set MPRV to 0 if SPP is not M
+    }
     io.csr_bundle.direct_write_enable := true.B
     io.id_interrupt_assert := true.B
     io.id_interrupt_handler_address := io.csr_bundle.sepc
@@ -200,6 +210,8 @@ class CLINT extends Module {
     }
   }.elsewhen(io.interrupt_flag =/= InterruptStatus.None) {
     // TODO: Support more than machine timer interrupt and machine external interrupt
+    // TODO: Interrupts for lower-privilege modes, w<x, are always globally disabled regardless of the setting of any global wIE bit for the lower-privilege mode
+    //  Interrupts for higher-privilege modes, y>x, are always globally enabled regardless of the setting of the global yIE bit for the higher-privilege mode
     val epc = Mux(
       io.jump_flag,
       io.jump_address,

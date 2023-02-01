@@ -111,7 +111,7 @@ class CLINTCSRTest extends AnyFlatSpec with ChiselScalatestTester{
       c.io.interrupt_handler_address.expect(0x1900L.U)
       c.clock.step()
       c.io.csr_regs_read_address.poke(CSRRegister.MSTATUS)
-      c.io.csr_regs_read_data.expect(0x1888L.U)
+      c.io.csr_regs_read_data.expect(0x88L.U)
 
       //handle interrupt when jumping
       c.io.jump_flag.poke(true.B)
@@ -136,7 +136,7 @@ class CLINTCSRTest extends AnyFlatSpec with ChiselScalatestTester{
       c.io.interrupt_handler_address.expect(0x1990L.U)
       c.clock.step()
       c.io.csr_regs_read_address.poke(CSRRegister.MSTATUS)
-      c.io.csr_regs_read_data.expect(0x1888L.U)
+      c.io.csr_regs_read_data.expect(0x88L.U)
       c.io.instruction.poke(InstructionsNop.nop)
 
       //don't handle interrupt under certain situation
