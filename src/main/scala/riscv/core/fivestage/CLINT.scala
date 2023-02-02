@@ -30,6 +30,8 @@ object PrivilegeLevel {
   val Machine = 3.U(2.W)
 }
 
+// Exception codes in mcause, refer to Spec. Vol.II Page 39
+// Note that exception codes in scause is a subset of mcause, refer to Spec. Vol.II Page 71
 object ExceptionCode {
   // Interrupts
   val SupervisorSoftwareInterrupt = 1.U((Parameters.DataBits - 1).W)
@@ -61,20 +63,20 @@ class CSRDirectAccessBundle extends Bundle {
   val medeleg = Input(UInt(Parameters.DataWidth))
   val mideleg = Input(UInt(Parameters.DataWidth))
   val mepc = Input(UInt(Parameters.DataWidth))
-  val mcause = Input(new MCAUSE)
+  val mcause = Input(new CAUSE)
   val mtval = Input(UInt(Parameters.DataWidth))
   val mtvec = Input(new TVEC)
   val sepc = Input(UInt(Parameters.DataWidth))
-  val scause = Input(new SCAUSE)
+  val scause = Input(new CAUSE)
   val stval = Input(UInt(Parameters.DataWidth))
   val stvec = Input(new TVEC)
 
   val mstatus_write_data = Output(new MSTATUS)
   val mepc_write_data = Output(UInt(Parameters.DataWidth))
-  val mcause_write_data = Output(new MCAUSE)
+  val mcause_write_data = Output(new CAUSE)
   val mtval_write_data = Output(UInt(Parameters.DataWidth))
   val sepc_write_data = Output(UInt(Parameters.DataWidth))
-  val scause_write_data = Output(new SCAUSE)
+  val scause_write_data = Output(new CAUSE)
   val stval_write_data = Output(UInt(Parameters.DataWidth))
 
   val direct_write_enable = Output(Bool())
@@ -186,18 +188,19 @@ class CLINT extends Module {
 
   // Return from S-mode after a trap handled
   def return_from_S(): Unit = {
+    // Note that SSTATUS is a subset of MSTATUS, so we directly write MSTATUS here
     io.csr_bundle.mstatus_write_data.SIE := io.csr_bundle.mstatus.SPIE // Restore SIE from SPIE
     current_privilege := Mux(io.csr_bundle.mstatus.SPP, PrivilegeLevel.Supervisor, PrivilegeLevel.User) // Restore current privilege level from SPP
     io.csr_bundle.mstatus_write_data.SPIE := true.B // Set SPIE to 1
-    io.csr_bundle.mstatus_write_data.SPP := PrivilegeLevel.User // Set SPP to least-privileged mode
-    when(io.csr_bundle.mstatus.SPP =/= PrivilegeLevel.Machine) {
-      io.csr_bundle.mstatus_write_data.MPRV := false.B // Set MPRV to 0 if SPP is not M
-    }
+    io.csr_bundle.mstatus_write_data.SPP := false.B // Set SPP to 0
+    io.csr_bundle.mstatus_write_data.MPRV := false.B // Because SPP always cannot be M, sret will always set MPRV to 0, refer to Spec. Vol.II Page 21
     io.csr_bundle.direct_write_enable := true.B
     io.id_interrupt_assert := true.B
     io.id_interrupt_handler_address := io.csr_bundle.sepc
   }
 
+  // TODO: Implement exception priority
+  // TODO: Write trap value to mtval/stval, refer to Spec. Vol.II Page 41 and 70
   when(io.exception_flag_id) {
     when(!current_privilege(1) && io.csr_bundle.medeleg(io.exception_code_id)) { // Exception occurs in U/S-mode and delegated to S-mode
       trap_into_S(io.instruction_address_id, false.B, io.exception_code_id, 0.U)

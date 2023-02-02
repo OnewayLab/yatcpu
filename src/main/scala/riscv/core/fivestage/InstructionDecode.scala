@@ -233,6 +233,8 @@ class InstructionDecode extends Module {
       funct3 === InstructionsTypeCSR.csrrc || funct3 === InstructionsTypeCSR.csrrci
     )
   // TODO: check accessibility of the CSR, refer to Spec. Vol.I Page 5-6
+  // Note that ECALL and EBREAK cause the receiving privilege mode's epc register to be set to the address of the ECALL or EBREAK instruction itself,
+  // and it's the trap handler's responsibility to increment the epc register to avoid infinite loops.
   when(io.instruction === InstructionsEnv.ebreak) {
     io.clint_exception_flag := true.B
     io.clint_exception_code := ExceptionCode.Breakpoint

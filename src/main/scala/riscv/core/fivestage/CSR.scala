@@ -108,14 +108,15 @@ class MSTATUS extends Bundle {
   val WPRI4 = Bool()
 }
 
-class MCAUSE extends Bundle {
+class CAUSE extends Bundle {
   val Interrupt = Bool()
-  val ExceptionCode = UInt(31.W)
+  val ExceptionCode = UInt((Parameters.DataBits - 1).W)
 }
 
-class SCAUSE extends Bundle {
-  val Interrupt = Bool()
-  val ExceptionCode = UInt(31.W)
+class SATP extends Bundle {
+  val MODE = UInt(1.W)
+  val ASID = UInt(9.W)
+  val PPN = UInt(22.W)
 }
 
 class CSR extends Module {
@@ -191,11 +192,11 @@ class CSR extends Module {
   io.clint_access_bundle.medeleg := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEDELEG, io.reg_write_data_ex, medeleg)
   io.clint_access_bundle.mideleg := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MIDELEG, io.reg_write_data_ex, mideleg)
   io.clint_access_bundle.mepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEPC, io.reg_write_data_ex, mepc)
-  io.clint_access_bundle.mcause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MCAUSE, io.reg_write_data_ex, mcause).asTypeOf(new MCAUSE)
+  io.clint_access_bundle.mcause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MCAUSE, io.reg_write_data_ex, mcause).asTypeOf(new CAUSE)
   io.clint_access_bundle.mtval := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVAL, io.reg_write_data_ex, mtval)
   io.clint_access_bundle.mtvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVEC, io.reg_write_data_ex, mtvec).asTypeOf(new TVEC)
   io.clint_access_bundle.sepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.SEPC, io.reg_write_data_ex, sepc)
-  io.clint_access_bundle.scause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.SCAUSE, io.reg_write_data_ex, scause).asTypeOf(new SCAUSE)
+  io.clint_access_bundle.scause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.SCAUSE, io.reg_write_data_ex, scause).asTypeOf(new CAUSE)
   io.clint_access_bundle.stval := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVAL, io.reg_write_data_ex, stval)
   io.clint_access_bundle.stvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVEC, io.reg_write_data_ex, stvec).asTypeOf(new TVEC)
   when(io.clint_access_bundle.direct_write_enable) {
