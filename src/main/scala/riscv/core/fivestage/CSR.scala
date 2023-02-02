@@ -72,6 +72,18 @@ class MISA extends Bundle {
   val Extensions = UInt(26.W)
 }
 
+class TVEC extends Bundle {
+  val Base = UInt((Parameters.DataBits - 2).W)
+  val Mode = UInt(2.W)
+}
+
+object TVEC {
+  object Mode {
+    val Direct = 0.U(2.W)
+    val Vectored = 1.U(2.W)
+  }
+}
+
 class MSTATUS extends Bundle {
   val SD = Bool()
   val WPRI = UInt(8.W)
@@ -128,7 +140,7 @@ class CSR extends Module {
   init_misa.ZERO := 0.U
   init_misa.Extensions := "b00000101000000000100000000".U // RV32ISU
 
-  val misa = RegInit(init_misa.asUInt)
+  val misa = init_misa.asUInt   // Since misa is read-only, we can just use a UInt instead of a register
   val mstatus = RegInit(0.U(Parameters.DataWidth))
   val medeleg = RegInit(0.U(Parameters.DataWidth)) // TODO: Make bits corresponding to exceptions that cannot occur in less privileged modes read-only zero.
   val mideleg = RegInit(0.U(Parameters.DataWidth))
@@ -181,11 +193,11 @@ class CSR extends Module {
   io.clint_access_bundle.mepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MEPC, io.reg_write_data_ex, mepc)
   io.clint_access_bundle.mcause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MCAUSE, io.reg_write_data_ex, mcause).asTypeOf(new MCAUSE)
   io.clint_access_bundle.mtval := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVAL, io.reg_write_data_ex, mtval)
-  io.clint_access_bundle.mtvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVEC, io.reg_write_data_ex, mtvec)
+  io.clint_access_bundle.mtvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.MTVEC, io.reg_write_data_ex, mtvec).asTypeOf(new TVEC)
   io.clint_access_bundle.sepc := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.SEPC, io.reg_write_data_ex, sepc)
   io.clint_access_bundle.scause := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.SCAUSE, io.reg_write_data_ex, scause).asTypeOf(new SCAUSE)
   io.clint_access_bundle.stval := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVAL, io.reg_write_data_ex, stval)
-  io.clint_access_bundle.stvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVEC, io.reg_write_data_ex, stvec)
+  io.clint_access_bundle.stvec := Mux(io.reg_write_enable_ex && io.reg_write_address_ex === CSRRegister.STVEC, io.reg_write_data_ex, stvec).asTypeOf(new TVEC)
   when(io.clint_access_bundle.direct_write_enable) {
     mstatus := io.clint_access_bundle.mstatus_write_data.asUInt
     mepc := io.clint_access_bundle.mepc_write_data

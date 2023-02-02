@@ -63,11 +63,11 @@ class CSRDirectAccessBundle extends Bundle {
   val mepc = Input(UInt(Parameters.DataWidth))
   val mcause = Input(new MCAUSE)
   val mtval = Input(UInt(Parameters.DataWidth))
-  val mtvec = Input(UInt(Parameters.DataWidth))
+  val mtvec = Input(new TVEC)
   val sepc = Input(UInt(Parameters.DataWidth))
   val scause = Input(new SCAUSE)
   val stval = Input(UInt(Parameters.DataWidth))
-  val stvec = Input(UInt(Parameters.DataWidth))
+  val stvec = Input(new TVEC)
 
   val mstatus_write_data = Output(new MSTATUS)
   val mepc_write_data = Output(UInt(Parameters.DataWidth))
@@ -145,7 +145,11 @@ class CLINT extends Module {
     io.csr_bundle.mtval_write_data := value
     io.csr_bundle.direct_write_enable := true.B
     io.id_interrupt_assert := true.B
-    io.id_interrupt_handler_address := io.csr_bundle.mtvec
+    io.id_interrupt_handler_address := Mux( // Set trap handler address according to MTVEC, refer to Spec. Vol.II Page 29-30
+      interrupt && io.csr_bundle.mtvec.Mode === TVEC.Mode.Vectored,
+      io.csr_bundle.mtvec.Base + (code << 2.U),
+      io.csr_bundle.mtvec.Base
+    ) << 2.U
   }
 
   // Return from M-mode after a trap handled, refer to Spec. Vol.II Page 21
@@ -173,7 +177,11 @@ class CLINT extends Module {
     io.csr_bundle.stval_write_data := value
     io.csr_bundle.direct_write_enable := true.B
     io.id_interrupt_assert := true.B
-    io.id_interrupt_handler_address := io.csr_bundle.mtvec
+    io.id_interrupt_handler_address := Mux( // Set trap handler address according to STVEC, refer to Spec. Vol.II Page 66
+      interrupt && io.csr_bundle.stvec.Mode === TVEC.Mode.Vectored,
+      io.csr_bundle.stvec.Base + (code << 2.U),
+      io.csr_bundle.stvec.Base
+    ) << 2.U
   }
 
   // Return from S-mode after a trap handled
