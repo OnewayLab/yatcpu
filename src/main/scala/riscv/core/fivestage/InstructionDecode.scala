@@ -167,12 +167,14 @@ class InstructionDecode extends Module {
     val clint_jump_address = Output(UInt(Parameters.AddrWidth))
     val clint_exception_flag = Output(Bool())
     val clint_exception_code = Output(UInt((Parameters.DataBits - 1).W))
+    val clint_exception_value = Output(UInt(Parameters.DataWidth))
     val if_jump_flag = Output(Bool())
     val if_jump_address = Output(UInt(Parameters.AddrWidth))
   })
 
   io.clint_exception_flag := false.B
   io.clint_exception_code := 0.U
+  io.clint_exception_value := 0.U
 
   // Decode instruction
   val opcode = io.instruction(6, 0)
@@ -238,6 +240,7 @@ class InstructionDecode extends Module {
   when(io.instruction === InstructionsEnv.ebreak) {
     io.clint_exception_flag := true.B
     io.clint_exception_code := ExceptionCode.Breakpoint
+    io.clint_exception_value := io.instruction_address
   }
   when(io.instruction === InstructionsEnv.ecall) {
     io.clint_exception_flag := true.B
@@ -283,10 +286,15 @@ class InstructionDecode extends Module {
         InstructionsTypeB.bgeu -> (reg1_data.asUInt >= reg2_data.asUInt)
       )
     )
-  val instruction_jump_address = io.ex_immediate + Mux(opcode === Instructions.jalr, reg1_data, io.instruction_address)
+  val instruction_jump_address = Mux(
+    opcode === Instructions.jalr,
+    (io.ex_immediate + reg1_data)(Parameters.DataBits - 1, 1) << 1.U,  // Note that the least significant bit of the target address is set to 0 for JALR, refer to Spec. Vol.I Page 21
+    io.ex_immediate + io.instruction_address
+  )
   when(instruction_jump_flag && (instruction_jump_address(1, 0) =/= 0.U)) { // Jump target address must be 4-byte aligned
     io.clint_exception_flag := true.B
     io.clint_exception_code := ExceptionCode.InstructionAddressMisaligned
+    io.clint_exception_value := instruction_jump_address
   }
   io.clint_jump_flag := instruction_jump_flag
   io.clint_jump_address := instruction_jump_address

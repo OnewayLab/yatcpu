@@ -361,21 +361,23 @@ class CPU extends Module {
   forwarding.io.reg_write_enable_wb := mem2wb.io.output_regs_write_enable
 
   clint.io.interrupt_flag := if2id.io.output_interrupt_flag
+  clint.io.exception_flag_id := id.io.clint_exception_flag
+  clint.io.exception_flag_mem := mem.io.clint_exception_flag
+  clint.io.exception_flag_mmu := mmu.io.clint_exception_flag
+  clint.io.exception_code_id := id.io.clint_exception_code
+  clint.io.exception_code_mem := mem.io.clint_exception_code
+  clint.io.exception_code_mmu := mmu.io.clint_exception_code
+  clint.io.exception_value_id := id.io.clint_exception_value
+  clint.io.exception_value_mem := mem.io.clint_exception_value
+  clint.io.exception_value_mmu := mem.io.clint_exception_value
   clint.io.instruction_id := if2id.io.output_instruction
   clint.io.instruction_address_if := inst_fetch.io.id_instruction_address
+  clint.io.instruction_address_id := if2id.io.output_instruction_address
+  clint.io.instruction_address_mem := ex2mem.io.output_instruction_address
+  clint.io.instruction_address_mmu := mmu.io.clint_instruction_address
   clint.io.jump_flag := id.io.if_jump_flag
   clint.io.jump_address := id.io.clint_jump_address
   clint.io.csr_bundle <> csr_regs.io.clint_access_bundle
-  clint.io.exception_flag_id := id.io.clint_exception_flag
-  clint.io.instruction_address_id := if2id.io.output_instruction_address
-  clint.io.exception_code_id := id.io.clint_exception_code
-  clint.io.exception_flag_mem := mem.io.clint_exception_flag
-  clint.io.instruction_address_mem := ex2mem.io.output_instruction_address
-  clint.io.exception_code_mem := mem.io.clint_exception_code
-  clint.io.exception_flag_mmu := mmu.io.clint_exception_flag
-  clint.io.instruction_address_mmu := mmu.io.clint_instruction_address
-  clint.io.exception_code_mmu := mmu.io.clint_exception_code
-  clint.io.exception_val_mmu := mmu.io.clint_exception_val
 
   csr_regs.io.reg_write_enable_ex := id2ex.io.output_csr_write_enable
   csr_regs.io.reg_write_address_ex := id2ex.io.output_csr_address

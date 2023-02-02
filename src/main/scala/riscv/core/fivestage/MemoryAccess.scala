@@ -36,6 +36,7 @@ class MemoryAccess extends Module {
     val forward_data = Output(UInt(Parameters.DataWidth))
     val clint_exception_flag = Output(Bool())
     val clint_exception_code = Output(UInt((Parameters.DataBits - 1).W))
+    val clint_exception_value = Output(UInt(Parameters.DataWidth))
 
     val physical_address = Input(UInt(Parameters.AddrWidth))
 
@@ -59,6 +60,7 @@ class MemoryAccess extends Module {
   io.ctrl_stall_flag := false.B
   io.clint_exception_flag := false.B
   io.clint_exception_code := 0.U
+  io.clint_exception_value := 0.U
 
   when(io.clint_exception_token){
     io.bus.request := false.B

@@ -95,7 +95,9 @@ class CLINT extends Module {
     val exception_code_id = Input(UInt((Parameters.DataBits - 1).W))
     val exception_code_mem = Input(UInt((Parameters.DataBits - 1).W))
     val exception_code_mmu = Input(UInt((Parameters.DataBits - 1).W))
-    val exception_val_mmu = Input(UInt(Parameters.AddrWidth))
+    val exception_value_id = Input(UInt(Parameters.DataWidth))
+    val exception_value_mem = Input(UInt(Parameters.DataWidth))
+    val exception_value_mmu = Input(UInt(Parameters.DataWidth))
 
     val instruction_id = Input(UInt(Parameters.InstructionWidth))
     val instruction_address_if = Input(UInt(Parameters.AddrWidth))
@@ -203,21 +205,21 @@ class CLINT extends Module {
   // TODO: Write trap value to mtval/stval, refer to Spec. Vol.II Page 41 and 70
   when(io.exception_flag_id) {
     when(!current_privilege(1) && io.csr_bundle.medeleg(io.exception_code_id)) { // Exception occurs in U/S-mode and delegated to S-mode
-      trap_into_S(io.instruction_address_id, false.B, io.exception_code_id, 0.U)
+      trap_into_S(io.instruction_address_id, false.B, io.exception_code_id, io.exception_value_id)
     }.otherwise { // Exception occurs in U/S/M-mode and handled in M-mode
-      trap_into_M(io.instruction_address_id, false.B, io.exception_code_id, 0.U)
+      trap_into_M(io.instruction_address_id, false.B, io.exception_code_id, io.exception_value_id)
     }
   }.elsewhen(io.exception_flag_mem) {
     when(!current_privilege(1) && io.csr_bundle.medeleg(io.exception_code_mem)) { // Exception occurs in U/S-mode and delegated to S-mode
-      trap_into_S(io.instruction_address_mem, false.B, io.exception_code_mem, 0.U)
+      trap_into_S(io.instruction_address_mem, false.B, io.exception_code_mem, io.exception_value_mem)
     }.otherwise { // Exception occurs in U/S/M-mode and handled in M-mode
-      trap_into_M(io.instruction_address_mem, false.B, io.exception_code_mem, 0.U)
+      trap_into_M(io.instruction_address_mem, false.B, io.exception_code_mem, io.exception_value_mem)
     }
   }.elsewhen(io.exception_flag_mmu) {
     when(!current_privilege(1) && io.csr_bundle.medeleg(io.exception_code_mmu)) { // Exception occurs in U/S-mode and delegated to S-mode
-      trap_into_S(io.instruction_address_mmu, false.B, io.exception_code_mmu, io.exception_val_mmu)
+      trap_into_S(io.instruction_address_mmu, false.B, io.exception_code_mmu, io.exception_value_mmu)
     }.otherwise { // Exception occurs in U/S/M-mode and handled in M-mode
-      trap_into_M(io.instruction_address_mmu, false.B, io.exception_code_mmu, io.exception_val_mmu)
+      trap_into_M(io.instruction_address_mmu, false.B, io.exception_code_mmu, io.exception_value_mmu)
     }
   }.elsewhen(io.interrupt_flag =/= InterruptStatus.None) {
     // TODO: Support more than machine timer interrupt and machine external interrupt

@@ -34,7 +34,9 @@ class CLINTCSRTestTopModule extends Module {
     val exception_code_id = Input(UInt((Parameters.DataBits - 1).W))
     val exception_code_mem = Input(UInt((Parameters.DataBits - 1).W))
     val exception_code_mmu = Input(UInt((Parameters.DataBits - 1).W))
-    val exception_val_mmu = Input(UInt(Parameters.AddrWidth))
+    val exception_value_id = Input(UInt(Parameters.DataWidth))
+    val exception_value_mem = Input(UInt(Parameters.DataWidth))
+    val exception_value_mmu = Input(UInt(Parameters.DataWidth))
 
     val instruction_id = Input(UInt(Parameters.InstructionWidth))
     val instruction_address_if = Input(UInt(Parameters.AddrWidth))
@@ -59,7 +61,9 @@ class CLINTCSRTestTopModule extends Module {
   clint.io.exception_code_id := io.exception_code_id
   clint.io.exception_code_mem := io.exception_code_mem
   clint.io.exception_code_mmu := io.exception_code_mmu
-  clint.io.exception_val_mmu := io.exception_val_mmu
+  clint.io.exception_value_id := io.exception_value_id
+  clint.io.exception_value_mem := io.exception_value_mem
+  clint.io.exception_value_mmu := io.exception_value_mmu
   clint.io.instruction_id := io.instruction_id
   clint.io.instruction_address_if := io.instruction_address_if
   clint.io.instruction_address_id := io.instruction_address_id
