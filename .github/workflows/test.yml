@@ -132,7 +132,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: yatcpu
-      - name: Setup Toolchain
+      - name: Setup Verilator
         run: sudo apt install -y verilator
       - name: Setup RISCV-GNT Toolchain
         run: |
@@ -141,7 +141,7 @@ jobs:
           git clone https://github.com/riscv/riscv-gnu-toolchain
           cd riscv-gnu-toolchain
           ./configure --prefix=/usr
-          make -j$(nproc)
+          sudo make -j4
       - name: Setup Scala
         uses: olafurpg/setup-scala@v11
         with:
