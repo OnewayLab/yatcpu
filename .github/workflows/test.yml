@@ -133,7 +133,15 @@ jobs:
         with:
           path: yatcpu
       - name: Setup Toolchain
-        run: sudo apt install -y verilator binutils-riscv64-unknown-elf gcc-riscv64-unknown-elf
+        run: sudo apt install -y verilator
+      - name: Setup RISCV-GNT Toolchain
+        run: |
+          cd ${{ github.workspace }}
+          sudo apt install -y autoconf automake autotools-dev curl python3 libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build
+          git clone https://github.com/riscv/riscv-gnu-toolchain
+          cd riscv-gnu-toolchain
+          ./configure --prefix=/usr
+          make -j$(nproc)
       - name: Setup Scala
         uses: olafurpg/setup-scala@v11
         with:
